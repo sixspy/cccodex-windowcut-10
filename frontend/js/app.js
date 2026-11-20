@@ -29,6 +29,13 @@ createApp({
     const locks = ref([]);
     const holds = ref([]);
     const dash = ref({});
+    const registry = ref({});
+
+    function errText(r, fallback) {
+      const d = r && r.body ? r.body.detail : null;
+      if (!d) return fallback;
+      return typeof d === "string" ? d : d.message || JSON.stringify(d);
+    }
     const form = ref({
       window_name: "W-1102",
       biz_key: "ORD-9",
@@ -112,6 +119,9 @@ createApp({
       const d = await api.get("/api/dashboard");
       if (d === null) return;
       dash.value = d.body || {};
+      const rg = await api.get("/api/contention/registry");
+      if (rg === null) return;
+      registry.value = rg.body || {};
       if (windows.value.length) {
         const q = await api.get("/api/reconcile/" + windows.value[0].id);
         if (q === null) return;
@@ -125,21 +135,21 @@ createApp({
       if (!r) return;
       actionErr.value = r.ok
         ? "处置：" + r.body.disposition
-        : r.body.detail || "失败";
+        : errText(r, "失败");
       await refresh();
     }
 
     async function closeWin(id) {
       actionErr.value = "";
       const r = await api.post("/api/windows/" + id + "/close", {});
-      if (r && !r.ok) actionErr.value = r.body.detail || "关窗失败";
+      if (r && !r.ok) actionErr.value = errText(r, "关窗失败");
       await refresh();
     }
 
     async function materialize(id) {
       actionErr.value = "";
       const r = await api.post("/api/windows/" + id + "/materialize", {});
-      if (r && !r.ok) actionErr.value = r.body.detail || "失败";
+      if (r && !r.ok) actionErr.value = errText(r, "失败");
       await refresh();
     }
 
@@ -153,7 +163,7 @@ createApp({
       const r = await api.post("/api/windows/" + id + "/reopen-stub", {
         mode: "作废重算",
       });
-      if (r && !r.ok) actionErr.value = r.body.detail || "重开空桩失败";
+      if (r && !r.ok) actionErr.value = errText(r, "重开空桩失败");
       else if (r) actionErr.value = "重开空桩已登记";
       await refresh();
     }
@@ -181,7 +191,7 @@ createApp({
     async function createHold() {
       actionErr.value = "";
       const r = await api.post("/api/holds", holdForm.value);
-      if (r && !r.ok) actionErr.value = r.body.detail || "暂存失败";
+      if (r && !r.ok) actionErr.value = errText(r, "暂存失败");
       await refresh();
     }
 
@@ -209,6 +219,7 @@ createApp({
       locks,
       holds,
       dash,
+      registry,
       form,
       holdForm,
       actionErr,

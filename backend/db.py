@@ -107,6 +107,13 @@ CREATE TABLE IF NOT EXISTS contention_log(
   detail TEXT,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS contention_registry(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  decided_on TEXT NOT NULL UNIQUE,
+  path TEXT NOT NULL,
+  decided_by TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit_trail(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   actor TEXT NOT NULL,
@@ -250,10 +257,23 @@ def seed_if_empty(conn: sqlite3.Connection) -> None:
     )
 
 
+def ensure_contention_registry(conn: sqlite3.Connection) -> None:
+    """争用登记册：选定甲路径落册，当天禁止改口（改口走 audit_svc 登记口判偏）。"""
+    if conn.execute("SELECT COUNT(*) c FROM contention_registry").fetchone()["c"] == 0:
+        from datetime import datetime
+
+        now = datetime.now()
+        conn.execute(
+            "INSERT INTO contention_registry(decided_on,path,decided_by,created_at) VALUES (?,?,?,?)",
+            (now.date().isoformat(), "甲", "system", now.isoformat(timespec="seconds")),
+        )
+
+
 def init_db() -> None:
     with connect() as conn:
         conn.executescript(SCHEMA)
         ensure_users(conn)
+        ensure_contention_registry(conn)
         seed_if_empty(conn)
         conn.commit()
 

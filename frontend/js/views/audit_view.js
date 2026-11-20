@@ -15,11 +15,15 @@ export const auditViewTemplate = `
 </div>
 <div class="card" v-show="tab===5">
   <h2>争用 / 锁</h2>
-  <p class="muted">争用 {{contention.length}} · 持锁 {{locks.length}}</p>
+  <p class="muted">
+    争用 {{contention.length}} · 持锁 {{locks.length}} · 争用偏了 {{dash.contention_deviated||0}}
+    · 登记册口径 {{registry.current ? registry.current.path + '路径（' + registry.current.decided_on + '）' : '未登记' }}
+  </p>
   <table>
-    <thead><tr><th>锁键</th><th>角色</th><th>动作</th><th>时间</th></tr></thead>
+    <thead><tr><th>#</th><th>锁键</th><th>角色</th><th>动作</th><th>时间</th></tr></thead>
     <tbody>
       <tr v-for="c in contention.slice(0,15)" :key="'c'+c.id">
+        <td>{{c.id}}</td>
         <td>{{c.lock_key}}</td>
         <td>{{c.actor}}</td>
         <td>{{c.action}}</td>
